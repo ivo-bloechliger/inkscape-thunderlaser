@@ -158,15 +158,15 @@ Option parser example:
             help='Width of laser area [mm]. Default: 900 mm')
 
         self.arg_parser.add_argument(
-            "--bbox_only", action="store", type=bool, dest="bbox_only", default=False,
+            "--bbox_only", action="store", type=inkex.utils.Boolean, dest="bbox_only", default=False,
             help="Cut bounding box only. Default: False")
 
         self.arg_parser.add_argument(
-            "--move_only", action="store", type=bool, dest="move_only", default=False,
+            "--move_only", action="store", type=inkex.utils.Boolean, dest="move_only", default=False,
             help="Move only, instead of cutting and moving. Default: False")
 
         self.arg_parser.add_argument(
-            "--dummy", action="store", type=bool, dest="dummy", default=False,
+            "--dummy", action="store", type=inkex.utils.Boolean, dest="dummy", default=False,
             help="Dummy device: Send to /tmp/thunderlaser.rd . Default: False")
 
         self.arg_parser.add_argument(
