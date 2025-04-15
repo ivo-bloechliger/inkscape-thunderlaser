@@ -756,15 +756,13 @@ class InkSvg():
             return None
 
         # Get a cubic super path
-        #p = cubicsuperpath.CubicSuperPath(sp)
         p = inkex.Path(sp).to_superpath()
         if (not p) or (len(p) == 0):
             # Probably never happens, but...
             return None
 
         if transform:
-            #simpletransform.applyTransformToPath(transform, p)
-            inkex.Path(p).transform(transform)
+            p = p.transform(transform)
 
         # Now traverse the cubic super path
         subpath_list = []
@@ -827,7 +825,7 @@ class InkSvg():
             self.paths.append( (node, subpath_list) )
 
 
-    def recursivelyTraverseSvg(self, aNodeList, matCurrent=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+    def recursivelyTraverseSvg(self, aNodeList, matCurrent=inkex.Transform(((1.0, 0.0, 0.0), (0.0, 1.0, 0.0))),
                                parent_visibility='visible'):
 
         '''
