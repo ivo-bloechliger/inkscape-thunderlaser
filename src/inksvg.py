@@ -356,7 +356,7 @@ class InkSvg():
             return bezmisc.bezierlength(bez, tolerance)
 
         style = self.getNodeStyle(node)
-        if not style.has_key('stroke-dasharray'):
+        if not 'stroke-dasharray' in style:
             return path_d
         dashes = []
         if style['stroke-dasharray'].find(',') > 0:
