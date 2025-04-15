@@ -336,8 +336,9 @@ class InkSvg():
         Copyright (C) 2009 Alvin Penner, penner@vaxxine.com
         """
 
-        def tpoint((x1,y1), (x2,y2), t = 0.5):
-            return [x1+t*(x2-x1),y1+t*(y2-y1)]
+        #def tpoint((x1,y1), (x2,y2), t = 0.5):
+        def tpoint(p1, p2, t = 0.5):
+            return [p1[0]+t*(p2[0]-p1[0]),p1[1]+t*(p2[1]-p1[1])]
         def cspbezsplit(sp1, sp2, t = 0.5):
             m1=tpoint(sp1[1],sp1[2],t)
             m2=tpoint(sp1[2],sp2[0],t)
