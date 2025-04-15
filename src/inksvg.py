@@ -143,7 +143,7 @@ class LinearPathGen(PathGenerator):
         self.pathList(a, node, mat)
 
     def objRoundedRect(self, x, y, w, h, rx, ry, node, mat):
-        print("calling roundedRectBezier", file=self.tty)
+        print("calling roundedRectBezier", file=self._svg.tty)
         d = self._svg.roundedRectBezier(x, y, w, h, rx, ry)
         self._svg.getPathVertices(d, node, mat, self.smoothness)
 
