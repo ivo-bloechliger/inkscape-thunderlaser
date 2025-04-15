@@ -605,6 +605,9 @@ class InkSvg():
         elif svgfile:
             self.document = self.load(svgfile)
 
+    def closeTTY(self):
+        self.tty.close()
+
     def getLength(self, name, default):
 
         '''

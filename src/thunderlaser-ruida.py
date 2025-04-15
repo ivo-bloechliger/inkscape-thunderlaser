@@ -396,12 +396,13 @@ Option parser example:
                         pass
                     if fd is not None:
                         rd.write(fd)
+                        fd.close()
                         # print(device+" written.", file=sys.stderr)
                         device_used = device
                         break
                 if device_used is None:
                         inkex.errormsg(gettext.gettext('Warning: no usable devices in device list (or bad directoy): '+self.options.devicelist))
-
+        svg.closeTTY()
 
 if __name__ == '__main__':
     e = ThunderLaser()
