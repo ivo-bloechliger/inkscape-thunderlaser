@@ -359,7 +359,7 @@ class InkSvg():
             return path_d
 
         dashoffset = 0.0
-        if style.has_key('stroke-dashoffset'):
+        if 'stroke-dashoffset' in style:
             dashoffset = float(style['stroke-dashoffset'])
             if dashoffset < 0.0: dashoffset = 0.0
             if dashoffset > dashes[0]: dashoffset = dashes[0]   # avoids a busy-loop below!
