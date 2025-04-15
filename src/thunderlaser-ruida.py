@@ -268,8 +268,8 @@ Option parser example:
         if self.options.ids:
             # Traverse the selected objects
             for id in self.options.ids:
-                transform = svg.recursivelyGetEnclosingTransform(self.selected[id])
-                svg.recursivelyTraverseSvg([self.selected[id]], transform)
+                transform = svg.recursivelyGetEnclosingTransform(self.svg.selected[id])
+                svg.recursivelyTraverseSvg([self.svg.selected[id]], transform)
         else:
             # Traverse the entire document building new, transformed paths
             svg.recursivelyTraverseSvg(self.document.getroot(), svg.docTransform)
