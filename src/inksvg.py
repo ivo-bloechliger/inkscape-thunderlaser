@@ -49,12 +49,6 @@ else:   # Linux
   sys.path.append('/usr/share/inkscape/extensions/')
 
 import inkex
-import simplepath
-import simplestyle
-import simpletransform
-import cubicsuperpath
-import cspsubdiv
-import bezmisc
 
 from lxml import etree
 
@@ -125,7 +119,7 @@ class LinearPathGen(PathGenerator):
         """
         d is expected as an [[cmd, [args]], ...] arrray
         """
-        return self.pathString(simplepath.formatPath(d), node, mat)
+        return self.pathString(str(inkex.Path(d)), node, mat)
 
     def objRect(self, x, y, w, h, node, mat):
         """
@@ -301,7 +295,7 @@ class InkSvg():
         style = node.get('style', '')
         if style is not None and style != '':
             sheet += '; '+style
-        return simplestyle.parseStyle(sheet)
+        return  dict(inkex.Style.parse_str(sheet))
 
     def getNodeStyle(self, node):
         """
@@ -349,11 +343,11 @@ class InkSvg():
             return [[sp1[0][:],sp1[1][:],m1], [m4,m,m5], [m3,sp2[1][:],sp2[2][:]]]
         def cspbezsplitatlength(sp1, sp2, l = 0.5, tolerance = 0.001):
             bez = (sp1[1][:],sp1[2][:],sp2[0][:],sp2[1][:])
-            t = bezmisc.beziertatlength(bez, l, tolerance)
+            t = inkex.bezier.beziertatlength(bez, l, tolerance)
             return cspbezsplit(sp1, sp2, t)
         def cspseglength(sp1,sp2, tolerance = 0.001):
             bez = (sp1[1][:],sp1[2][:],sp2[0][:],sp2[1][:])
-            return bezmisc.bezierlength(bez, tolerance)
+            return inkex.bezier.bezierlength(bez, tolerance)
 
         style = self.getNodeStyle(node)
         if not 'stroke-dasharray' in style:
@@ -370,7 +364,7 @@ class InkSvg():
             if dashoffset < 0.0: dashoffset = 0.0
             if dashoffset > dashes[0]: dashoffset = dashes[0]   # avoids a busy-loop below!
 
-        p = cubicsuperpath.parsePath(path_d)
+        p = inkex.paths.CubicSuperPath(inkex.paths.Path(path_d))  # cubicsuperpath.parsePath(path_d)
         new = []
         for sub in p:
             idash = 0
@@ -397,7 +391,7 @@ class InkSvg():
                 else:
                     new[-1].append(sub[i])
                 i+=1
-        return cubicsuperpath.formatPath(new)
+        return str(inkex.paths.Path(inkex.paths.CubicSuperPath(new).to_path().to_arrays())) #cubicsuperpath.formatPath(new)
 
     def matchStrokeColor(self, node, rgb, eps=None, avg=True):
         """
@@ -424,7 +418,7 @@ class InkSvg():
         style = self.getNodeStyle(node)
         s = style.get('stroke', '')
         if s == '': return False
-        c = simplestyle.parseColor(s)
+        c = tuple(inkex.Color(s).to_rgb())
         if sum:
            s = abs(rgb[0]-c[0]) + abs(rgb[1]-c[1]) + abs(rgb[2]-c[2])
            if s < 3*eps:
@@ -518,12 +512,13 @@ class InkSvg():
 
                 b = (p0, p1, p2, p3)
 
-                if cspsubdiv.maxdist(b) > flat:
+                #if cspsubdiv.maxdist(b) > flat:
+                if inkex.bezier.maxdist(b) > flat:
                     break
 
                 i += 1
 
-            one, two = bezmisc.beziersplitatt(b, 0.5)
+            one, two = inkex.bezier.beziersplitatt(b, 0.5)
             sp[i - 1][2] = one[1]
             sp[i][0] = two[2]
             p = [one[2], one[3], two[1]]
@@ -728,7 +723,7 @@ class InkSvg():
                 if (vinfo[2] != 0) and (vinfo[3] != 0):
                     sx = self.docWidth  / float(vinfo[2])
                     sy = self.docHeight / float(vinfo[3])
-                    self.docTransform = simpletransform.parseTransform('scale(%f,%f)' % (sx, sy))
+                    self.docTransform = inkex.Transform('scale(%f,%f)' % (sx, sy)).matrix
 
     def getPathVertices(self, path, node=None, transform=None, smoothness=None):
 
@@ -755,19 +750,21 @@ class InkSvg():
             path = self.styleDasharray(path, node)
 
         # parsePath() may raise an exception.  This is okay
-        sp = simplepath.parsePath(path)
+        sp = inkex.Path(path).to_arrays()
         if (not sp) or (len(sp) == 0):
             # Path must have been devoid of any real content
             return None
 
         # Get a cubic super path
-        p = cubicsuperpath.CubicSuperPath(sp)
+        #p = cubicsuperpath.CubicSuperPath(sp)
+        p = inkex.Path(sp).to_superpath()
         if (not p) or (len(p) == 0):
             # Probably never happens, but...
             return None
 
         if transform:
-            simpletransform.applyTransformToPath(transform, p)
+            #simpletransform.applyTransformToPath(transform, p)
+            inkex.Path(p).transform(transform)
 
         # Now traverse the cubic super path
         subpath_list = []
@@ -868,8 +865,7 @@ class InkSvg():
             if s.get('display', '') == 'none': continue
 
             # First apply the current matrix transform to this node's tranform
-            matNew = simpletransform.composeTransform(
-                matCurrent, simpletransform.parseTransform(node.get("transform")))
+            matNew = inkex.Transform(matCurrent) @ inkex.Transform((node.get("transform")))
 
             if node.tag == inkex.addNS('g', 'svg') or node.tag == 'g':
 
@@ -904,7 +900,7 @@ class InkSvg():
                     y = float(node.get('y', '0'))
                     # Note: the transform has already been applied
                     if (x != 0) or (y != 0):
-                        matNew2 = simpletransform.composeTransform(matNew, simpletransform.parseTransform('translate(%f,%f)' % (x, y)))
+                        matNew2 = matNew @ inkex.Transform('translate(%f,%f)' % (x, y))
                     else:
                         matNew2 = matNew
                     visibility = node.get('visibility', visibility)
@@ -1099,7 +1095,7 @@ class InkSvg():
                 # color output
                 pass
 
-            elif not isinstance(node.tag, basestring):
+            elif not isinstance(node.tag, str):  # no basestring in python3
                 # This is likely an XML processing instruction such as an XML
                 # comment.  lxml uses a function reference for such node tags
                 # and as such the node tag is likely not a printable string.
@@ -1124,11 +1120,11 @@ class InkSvg():
             if node_transform is None:
                 return parent_transform
             else:
-                tr = simpletransform.parseTransform(node_transform)
+                tr = inkex.Transform(node_transform)
                 if parent_transform is None:
                     return tr
                 else:
-                    return simpletransform.composeTransform(parent_transform, tr)
+                    return parent_transform @ tr
         else:
             return self.docTransform
 
