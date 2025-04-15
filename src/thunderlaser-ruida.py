@@ -403,4 +403,4 @@ Option parser example:
 
 if __name__ == '__main__':
     e = ThunderLaser()
-    e.affect()
+    e.run()
