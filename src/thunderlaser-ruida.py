@@ -32,7 +32,7 @@ import sys
 
 sys_platform = sys.platform.lower()
 if sys_platform.startswith('win'):
-  sys.path.append('C:\Program Files\Inkscape\share\extensions')
+  sys.path.append(r'C:\Program Files\Inkscape\share\extensions')
 elif sys_platform.startswith('darwin'):
   sys.path.append('~/.config/inkscape/extensions')
 else:   # Linux

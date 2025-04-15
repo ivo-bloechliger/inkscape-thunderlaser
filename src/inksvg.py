@@ -42,7 +42,7 @@ import sys
 
 sys_platform = sys.platform.lower()
 if sys_platform.startswith('win'):
-  sys.path.append('C:\Program Files\Inkscape\share\extensions')
+  sys.path.append(r'C:\Program Files\Inkscape\share\extensions')
 elif sys_platform.startswith('darwin'):
   sys.path.append('~/.config/inkscape/extensions')
 else:   # Linux
@@ -290,7 +290,7 @@ class InkSvg():
         selectors = []
         classes = node.get('class', '')         # classes == None can happen here.
         if classes is not None and classes != '':
-            selectors = ["."+cls for cls in re.split('[\s,]+', classes)]
+            selectors = ["."+cls for cls in re.split(r'[\s,]+', classes)]
             selectors += [node.tag+sel for sel in selectors]
         node_id = node.get('id', '')
         if node_id is not None and node_id != '':
@@ -440,19 +440,19 @@ class InkSvg():
         Represent css cdata as a hash in css_dict.
         Implements what is seen on: http://www.blooberry.com/indexdot/css/examples/cssembedded.htm
         """
-        text=re.sub('^\s*(<!--)?\s*', '', text)
+        text=re.sub(r'^\s*(<!--)?\s*', '', text)
         while True:
             try:
                 (keys, rest) = text.split('{', 1)
             except:
                 break
-            keys = re.sub('/\*.*?\*/', ' ', keys)   # replace comments with whitespace
-            keys = re.split('[\s,]+', keys)         # convert to list
+            keys = re.sub(r'/\*.*?\*/', ' ', keys)   # replace comments with whitespace
+            keys = re.split(r'[\s,]+', keys)         # convert to list
             while '' in keys:
                 keys.remove('')                     # remove empty elements (at start or end)
             (val,text) = rest.split('}', 1)
-            val = re.sub('/\*.*?\*/', '', val)      # replace comments nothing in values
-            val = re.sub('\s+', ' ', val).strip()   # normalize whitespace
+            val = re.sub(r'/\*.*?\*/', '', val)      # replace comments nothing in values
+            val = re.sub(r'\s+', ' ', val).strip()   # normalize whitespace
             for k in keys:
                 if not k in self.css_dict:
                     self.css_dict[k] = val
