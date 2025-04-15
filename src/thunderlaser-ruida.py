@@ -330,8 +330,10 @@ Option parser example:
                                 [bbox[0][0],bbox[1][1]], [bbox[0][0],bbox[0][1]] ]]
                 paths_list_cut = paths_list
                 paths_list_mark = paths_list
-                if cut_opt['color']  == 'any' or mark_opt is None: paths_list_mark = []
-                if mark_opt['color'] == 'any' or  cut_opt is None: paths_list_cut  = []      # once is enough.
+                if cut_opt['color']  == 'any' or mark_opt is None: 
+                     paths_list_mark = []
+                elif mark_opt['color'] == 'any' or  cut_opt is None: 
+                     paths_list_cut  = []      # once is enough.
         if self.options.move_only:
                 paths_list      = rd.paths2moves(paths_list)
                 paths_list_cut  = rd.paths2moves(paths_list_cut)
