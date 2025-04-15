@@ -30,9 +30,11 @@ from __future__ import print_function
 
 import sys
 
+import inkex.localization
+
 sys_platform = sys.platform.lower()
 if sys_platform.startswith('win'):
-  sys.path.append('C:\Program Files\Inkscape\share\extensions')
+  sys.path.append(r'C:\Program Files\Inkscape\share\extensions')
 elif sys_platform.startswith('darwin'):
   sys.path.append('~/.config/inkscape/extensions')
 else:   # Linux
@@ -75,6 +77,7 @@ else:   # Linux
 #                      Added load(), getElementsByIds() methods.
 # 2018-03-21 jw, v1.7d Added handleViewBox() to load().
 #                      Added traverse().
+# 2019-01-12 jw, v1.7e debug output to self.tty
 
 import gettext
 import re
@@ -82,19 +85,13 @@ import sys
 
 sys_platform = sys.platform.lower()
 if sys_platform.startswith('win'):
-  sys.path.append('C:\Program Files\Inkscape\share\extensions')
+  sys.path.append(r'C:\Program Files\Inkscape\share\extensions')
 elif sys_platform.startswith('darwin'):
   sys.path.append('~/.config/inkscape/extensions')
 else:   # Linux
   sys.path.append('/usr/share/inkscape/extensions/')
 
 import inkex
-import simplepath
-import simplestyle
-import simpletransform
-import cubicsuperpath
-import cspsubdiv
-import bezmisc
 
 from lxml import etree
 
@@ -158,14 +155,14 @@ class LinearPathGen(PathGenerator):
         """
         d is expected formatted as an svg path string here.
         """
-        print("calling getPathVertices",  self.smoothness)
+        print("calling getPathVertices",  self.smoothness, file=self._svg.tty)
         self._svg.getPathVertices(d, node, mat, self.smoothness)
 
     def pathList(self, d, node, mat):
         """
         d is expected as an [[cmd, [args]], ...] arrray
         """
-        return self.pathString(simplepath.formatPath(d), node, mat)
+        return self.pathString(str(inkex.Path(d)), node, mat)
 
     def objRect(self, x, y, w, h, node, mat):
         """
@@ -181,15 +178,15 @@ class LinearPathGen(PathGenerator):
         fourth side implicitly
         """
         a = []
-        a.append(['M ', [x, y]])
-        a.append([' l ', [w, 0]])
-        a.append([' l ', [0, h]])
-        a.append([' l ', [-w, 0]])
-        a.append([' Z', []])
+        a.append(['M', [x, y]])
+        a.append(['l', [w, 0]])
+        a.append(['l', [0, h]])
+        a.append(['l', [-w, 0]])
+        a.append(['Z', []])
         self.pathList(a, node, mat)
 
     def objRoundedRect(self, x, y, w, h, rx, ry, node, mat):
-        print("calling roundedRectBezier")
+        print("calling roundedRectBezier", file=self._svg.tty)
         d = self._svg.roundedRectBezier(x, y, w, h, rx, ry)
         self._svg.getPathVertices(d, node, mat, self.smoothness)
 
@@ -258,7 +255,7 @@ class InkSvg():
     #    print(svg.pathgen.path)
 
     """
-    __version__ = "1.7c"
+    __version__ = "1.7e"
     DEFAULT_WIDTH = 100
     DEFAULT_HEIGHT = 100
 
@@ -330,7 +327,7 @@ class InkSvg():
         selectors = []
         classes = node.get('class', '')         # classes == None can happen here.
         if classes is not None and classes != '':
-            selectors = ["."+cls for cls in re.split('[\s,]+', classes)]
+            selectors = ["."+cls for cls in re.split(r'[\s,]+', classes)]
             selectors += [node.tag+sel for sel in selectors]
         node_id = node.get('id', '')
         if node_id is not None and node_id != '':
@@ -341,7 +338,7 @@ class InkSvg():
         style = node.get('style', '')
         if style is not None and style != '':
             sheet += '; '+style
-        return simplestyle.parseStyle(sheet)
+        return  dict(inkex.Style.parse_str(sheet))
 
     def getNodeStyle(self, node):
         """
@@ -376,8 +373,9 @@ class InkSvg():
         Copyright (C) 2009 Alvin Penner, penner@vaxxine.com
         """
 
-        def tpoint((x1,y1), (x2,y2), t = 0.5):
-            return [x1+t*(x2-x1),y1+t*(y2-y1)]
+        #def tpoint((x1,y1), (x2,y2), t = 0.5):
+        def tpoint(p1, p2, t = 0.5):
+            return [p1[0]+t*(p2[0]-p1[0]),p1[1]+t*(p2[1]-p1[1])]
         def cspbezsplit(sp1, sp2, t = 0.5):
             m1=tpoint(sp1[1],sp1[2],t)
             m2=tpoint(sp1[2],sp2[0],t)
@@ -388,14 +386,14 @@ class InkSvg():
             return [[sp1[0][:],sp1[1][:],m1], [m4,m,m5], [m3,sp2[1][:],sp2[2][:]]]
         def cspbezsplitatlength(sp1, sp2, l = 0.5, tolerance = 0.001):
             bez = (sp1[1][:],sp1[2][:],sp2[0][:],sp2[1][:])
-            t = bezmisc.beziertatlength(bez, l, tolerance)
+            t = inkex.bezier.beziertatlength(bez, l, tolerance)
             return cspbezsplit(sp1, sp2, t)
         def cspseglength(sp1,sp2, tolerance = 0.001):
             bez = (sp1[1][:],sp1[2][:],sp2[0][:],sp2[1][:])
-            return bezmisc.bezierlength(bez, tolerance)
+            return inkex.bezier.bezierlength(bez, tolerance)
 
         style = self.getNodeStyle(node)
-        if not style.has_key('stroke-dasharray'):
+        if not 'stroke-dasharray' in style:
             return path_d
         dashes = []
         if style['stroke-dasharray'].find(',') > 0:
@@ -409,12 +407,12 @@ class InkSvg():
             if dashoffset < 0.0: dashoffset = 0.0
             if dashoffset > dashes[0]: dashoffset = dashes[0]   # avoids a busy-loop below!
 
-        p = cubicsuperpath.parsePath(path_d)
+        p = inkex.paths.CubicSuperPath(inkex.paths.Path(path_d))  # cubicsuperpath.parsePath(path_d)
         new = []
         for sub in p:
             idash = 0
             dash = dashes[0]
-            # print("initial dash length: ", dash, dashoffset)
+            # print("initial dash length: ", dash, dashoffset, file=self.tty)
             dash = dash - dashoffset
             length = 0
             new.append([sub[0][:]])
@@ -436,7 +434,7 @@ class InkSvg():
                 else:
                     new[-1].append(sub[i])
                 i+=1
-        return cubicsuperpath.formatPath(new)
+        return str(inkex.paths.Path(inkex.paths.CubicSuperPath(new).to_path().to_arrays())) #cubicsuperpath.formatPath(new)
 
     def matchStrokeColor(self, node, rgb, eps=None, avg=True):
         """
@@ -463,7 +461,7 @@ class InkSvg():
         style = self.getNodeStyle(node)
         s = style.get('stroke', '')
         if s == '': return False
-        c = simplestyle.parseColor(s)
+        c = tuple(inkex.Color(s).to_rgb())
         if sum:
            s = abs(rgb[0]-c[0]) + abs(rgb[1]-c[1]) + abs(rgb[2]-c[2])
            if s < 3*eps:
@@ -479,19 +477,19 @@ class InkSvg():
         Represent css cdata as a hash in css_dict.
         Implements what is seen on: http://www.blooberry.com/indexdot/css/examples/cssembedded.htm
         """
-        text=re.sub('^\s*(<!--)?\s*', '', text)
+        text=re.sub(r'^\s*(<!--)?\s*', '', text)
         while True:
             try:
                 (keys, rest) = text.split('{', 1)
             except:
                 break
-            keys = re.sub('/\*.*?\*/', ' ', keys)   # replace comments with whitespace
-            keys = re.split('[\s,]+', keys)         # convert to list
+            keys = re.sub(r'/\*.*?\*/', ' ', keys)   # replace comments with whitespace
+            keys = re.split(r'[\s,]+', keys)         # convert to list
             while '' in keys:
                 keys.remove('')                     # remove empty elements (at start or end)
             (val,text) = rest.split('}', 1)
-            val = re.sub('/\*.*?\*/', '', val)      # replace comments nothing in values
-            val = re.sub('\s+', ' ', val).strip()   # normalize whitespace
+            val = re.sub(r'/\*.*?\*/', '', val)      # replace comments nothing in values
+            val = re.sub(r'\s+', ' ', val).strip()   # normalize whitespace
             for k in keys:
                 if not k in self.css_dict:
                     self.css_dict[k] = val
@@ -557,12 +555,13 @@ class InkSvg():
 
                 b = (p0, p1, p2, p3)
 
-                if cspsubdiv.maxdist(b) > flat:
+                #if cspsubdiv.maxdist(b) > flat:
+                if inkex.bezier.maxdist(b) > flat:
                     break
 
                 i += 1
 
-            one, two = bezmisc.beziersplitatt(b, 0.5)
+            one, two = inkex.bezier.beziersplitatt(b, 0.5)
             sp[i - 1][2] = one[1]
             sp[i][0] = two[2]
             p = [one[2], one[3], two[1]]
@@ -595,7 +594,7 @@ class InkSvg():
         return v, u
 
 
-    def __init__(self, document=None, svgfile=None, smoothness=0.2, pathgen=LinearPathGen(smoothness=0.2)):
+    def __init__(self, document=None, svgfile=None, smoothness=0.2, debug=False, pathgen=LinearPathGen(smoothness=0.2)):
         """
         Usage: ...
         """
@@ -603,6 +602,13 @@ class InkSvg():
         self.px_used = False            # raw px unit depends on correct dpi.
         self.xmin, self.xmax = (1.0E70, -1.0E70)
         self.ymin, self.ymax = (1.0E70, -1.0E70)
+
+        try:
+            if debug == False: raise ValueError('intentional exception')
+            self.tty = open("/dev/tty", 'w')
+        except:
+            from os import devnull
+            self.tty = open(devnull, 'w')  # '/dev/null' for POSIX, 'nul' for Windows.
 
         # CAUTION: smoothness here is deprecated. it belongs into pathgen, if.
         # CAUTION: smoothness == 0.0 leads to a busy-loop.
@@ -636,6 +642,9 @@ class InkSvg():
                 inkex.errormsg('Warning: ignoring svgfile. document given too.')
         elif svgfile:
             self.document = self.load(svgfile)
+
+    def closeTTY(self):
+        self.tty.close()
 
     def getLength(self, name, default):
 
@@ -757,7 +766,7 @@ class InkSvg():
                 if (vinfo[2] != 0) and (vinfo[3] != 0):
                     sx = self.docWidth  / float(vinfo[2])
                     sy = self.docHeight / float(vinfo[3])
-                    self.docTransform = simpletransform.parseTransform('scale(%f,%f)' % (sx, sy))
+                    self.docTransform = inkex.Transform('scale(%f,%f)' % (sx, sy)).matrix
 
     def getPathVertices(self, path, node=None, transform=None, smoothness=None):
 
@@ -784,19 +793,19 @@ class InkSvg():
             path = self.styleDasharray(path, node)
 
         # parsePath() may raise an exception.  This is okay
-        sp = simplepath.parsePath(path)
+        sp = inkex.Path(path).to_arrays()
         if (not sp) or (len(sp) == 0):
             # Path must have been devoid of any real content
             return None
 
         # Get a cubic super path
-        p = cubicsuperpath.CubicSuperPath(sp)
+        p = inkex.Path(sp).to_superpath()
         if (not p) or (len(p) == 0):
             # Probably never happens, but...
             return None
 
         if transform:
-            simpletransform.applyTransformToPath(transform, p)
+            p = p.transform(transform)
 
         # Now traverse the cubic super path
         subpath_list = []
@@ -859,7 +868,7 @@ class InkSvg():
             self.paths.append( (node, subpath_list) )
 
 
-    def recursivelyTraverseSvg(self, aNodeList, matCurrent=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+    def recursivelyTraverseSvg(self, aNodeList, matCurrent=inkex.Transform(((1.0, 0.0, 0.0), (0.0, 1.0, 0.0))),
                                parent_visibility='visible'):
 
         '''
@@ -897,8 +906,7 @@ class InkSvg():
             if s.get('display', '') == 'none': continue
 
             # First apply the current matrix transform to this node's tranform
-            matNew = simpletransform.composeTransform(
-                matCurrent, simpletransform.parseTransform(node.get("transform")))
+            matNew = inkex.Transform(matCurrent) @ inkex.Transform((node.get("transform")))
 
             if node.tag == inkex.addNS('g', 'svg') or node.tag == 'g':
 
@@ -933,7 +941,7 @@ class InkSvg():
                     y = float(node.get('y', '0'))
                     # Note: the transform has already been applied
                     if (x != 0) or (y != 0):
-                        matNew2 = simpletransform.composeTransform(matNew, simpletransform.parseTransform('translate(%f,%f)' % (x, y)))
+                        matNew2 = matNew @ inkex.Transform('translate(%f,%f)' % (x, y))
                     else:
                         matNew2 = matNew
                     visibility = node.get('visibility', visibility)
@@ -1128,7 +1136,7 @@ class InkSvg():
                 # color output
                 pass
 
-            elif not isinstance(node.tag, basestring):
+            elif not isinstance(node.tag, str):  # no basestring in python3
                 # This is likely an XML processing instruction such as an XML
                 # comment.  lxml uses a function reference for such node tags
                 # and as such the node tag is likely not a printable string.
@@ -1153,11 +1161,11 @@ class InkSvg():
             if node_transform is None:
                 return parent_transform
             else:
-                tr = simpletransform.parseTransform(node_transform)
+                tr = inkex.Transform(node_transform)
                 if parent_transform is None:
                     return tr
                 else:
-                    return simpletransform.composeTransform(parent_transform, tr)
+                    return parent_transform @ tr
         else:
             return self.docTransform
 
@@ -1833,110 +1841,110 @@ Option parser example:
 'thunderlaser.py', '--tab="thunderlaser"', '--cut_group="cut_plastics"', '--cut_wood=30,50,65', '--cut_plastics=25,55,70', '--cut_other=300,26,65', '--cut_manual_speed=68', '--cut_manual_minpow=60', '--cut_manual_maxpow=70', '--cut_color=any', '--mark_group="mark_material"', '--mark_material=1000,8,25', '--mark_manual_speed=30', '--mark_manual_minpow=50', '--mark_manual_maxpow=70', '--mark_color=none', '--smoothness=0.20000000298023224', '--maxwidth=900', '--maxheight=600', '--bbox_only=false', '--device=/dev/ttyUSB0,/tmp/hannes.rd', '--dummy=true', '/tmp/ink_ext_XXXXXX.svgDTI8AZ']
 
         """
-        inkex.localize()    # does not help for localizing my *.inx file
+        inkex.localization.localize()    # does not help for localizing my *.inx file
         inkex.Effect.__init__(self)
 
-        self.OptionParser.add_option(
+        self.arg_parser.add_argument(
             "--tab",  # NOTE: value is not used.
-            action="store", type="string", dest="tab", default="thunderlaser",
+            action="store", type=str, dest="tab", default="thunderlaser",
             help="The active tab when Apply was pressed")
 
-        self.OptionParser.add_option(
-            "--cut_group", action="store", type="string", dest="cut_group", default="cut_wood",
+        self.arg_parser.add_argument(
+            "--cut_group", action="store", type=str, dest="cut_group", default="cut_wood",
             help="The active cut_group tab when Apply was pressed")
 
-        self.OptionParser.add_option(
-            "--mark_group", action="store", type="string", dest="mark_group", default="mark_material",
+        self.arg_parser.add_argument(
+            "--mark_group", action="store", type=str, dest="mark_group", default="mark_material",
             help="The active mark_group tab when Apply was pressed")
 
-        self.OptionParser.add_option(
-            "--cut_color", action="store", type="string", dest="cut_color", default="any",
+        self.arg_parser.add_argument(
+            "--cut_color", action="store", type=str, dest="cut_color", default="any",
             help="The color setting for cutting. Default: any")
 
-        self.OptionParser.add_option(
-            "--mark_color", action="store", type="string", dest="mark_color", default="none",
+        self.arg_parser.add_argument(
+            "--mark_color", action="store", type=str, dest="mark_color", default="none",
             help="The color setting for cutting. Default: none")
 
 
 
-        self.OptionParser.add_option(
-            '--cut_wood', dest='cut_wood', type='string', default='30,50,65', action='store',
+        self.arg_parser.add_argument(
+            '--cut_wood', dest='cut_wood', type=str, default='30,50,65', action='store',
             help='Speed,MinPower,MaxPower Setting when cutting wood is selected.')
 
-        self.OptionParser.add_option(
-            '--cut_plastics', dest='cut_plastics', type='string', default='', action='store',
+        self.arg_parser.add_argument(
+            '--cut_plastics', dest='cut_plastics', type=str, default='', action='store',
             help='Speed,MinPower,MaxPower Setting when cutting plastics is selected.')
 
-        self.OptionParser.add_option(
-            '--cut_other', dest='cut_other', type='string', default='', action='store',
+        self.arg_parser.add_argument(
+            '--cut_other', dest='cut_other', type=str, default='', action='store',
             help='Speed,MinPower,MaxPower Setting when cutting other is selected.')
 
-        self.OptionParser.add_option(
-            '--cut_manual_speed', dest='cut_manual_speed', type='int', default=30, action='store',
+        self.arg_parser.add_argument(
+            '--cut_manual_speed', dest='cut_manual_speed', type=int, default=30, action='store',
             help='Speed Setting when cutting with manual entry is selected.')
 
-        self.OptionParser.add_option(
-            '--cut_manual_minpow', dest='cut_manual_minpow', type='int', default=30, action='store',
+        self.arg_parser.add_argument(
+            '--cut_manual_minpow', dest='cut_manual_minpow', type=int, default=30, action='store',
             help='MinPower1 Setting when cutting with manual entry is selected.')
 
-        self.OptionParser.add_option(
-            '--cut_manual_maxpow', dest='cut_manual_maxpow', type='int', default=30, action='store',
+        self.arg_parser.add_argument(
+            '--cut_manual_maxpow', dest='cut_manual_maxpow', type=int, default=30, action='store',
             help='MaxPower1 Setting when cutting with manual entry is selected.')
 
 
 
 
-        self.OptionParser.add_option(
-            '--mark_material', dest='mark_material', type='string', default='1000,7,18', action='store',
+        self.arg_parser.add_argument(
+            '--mark_material', dest='mark_material', type=str, default='1000,7,18', action='store',
             help='Speed,MinPower,MaxPower Setting when marking by material is selected.')
 
-        self.OptionParser.add_option(
-            '--mark_manual_speed', dest='mark_manual_speed', type='int', default=1000, action='store',
+        self.arg_parser.add_argument(
+            '--mark_manual_speed', dest='mark_manual_speed', type=int, default=1000, action='store',
             help='Speed Setting when marking with manual entry is selected.')
 
-        self.OptionParser.add_option(
-            '--mark_manual_minpow', dest='mark_manual_minpow', type='int', default=7, action='store',
+        self.arg_parser.add_argument(
+            '--mark_manual_minpow', dest='mark_manual_minpow', type=int, default=7, action='store',
             help='MinPower1 Setting when marking with manual entry is selected.')
 
-        self.OptionParser.add_option(
-            '--mark_manual_maxpow', dest='mark_manual_maxpow', type='int', default=18, action='store',
+        self.arg_parser.add_argument(
+            '--mark_manual_maxpow', dest='mark_manual_maxpow', type=int, default=18, action='store',
             help='MaxPower1 Setting when marking with manual entry is selected.')
 
 
 
-        self.OptionParser.add_option(
-            '--smoothness', dest='smoothness', type='float', default=float(0.2), action='store',
+        self.arg_parser.add_argument(
+            '--smoothness', dest='smoothness', type=float, default=float(0.2), action='store',
             help='Curve smoothing (less for more [0.0001 .. 5]). Default: 0.2')
 
-        self.OptionParser.add_option(
-            '--freq1', dest='freq1', type='float', default=float(20.0), action='store',
+        self.arg_parser.add_argument(
+            '--freq1', dest='freq1', type=float, default=float(20.0), action='store',
             help='Laser1 frequency [kHz]. Default: 20.0')
 
-        self.OptionParser.add_option(
-            '--maxheight', dest='maxheight', type='string', default='600', action='store',
+        self.arg_parser.add_argument(
+            '--maxheight', dest='maxheight', type=str, default='600', action='store',
             help='Height of laser area [mm]. Default: 600 mm')
 
-        self.OptionParser.add_option(
-            '--maxwidth', dest='maxwidth', type='string', default='900', action='store',
+        self.arg_parser.add_argument(
+            '--maxwidth', dest='maxwidth', type=str, default='900', action='store',
             help='Width of laser area [mm]. Default: 900 mm')
 
-        self.OptionParser.add_option(
-            "--bbox_only", action="store", type="inkbool", dest="bbox_only", default=False,
+        self.arg_parser.add_argument(
+            "--bbox_only", action="store", type=inkex.utils.Boolean, dest="bbox_only", default=False,
             help="Cut bounding box only. Default: False")
 
-        self.OptionParser.add_option(
-            "--move_only", action="store", type="inkbool", dest="move_only", default=False,
+        self.arg_parser.add_argument(
+            "--move_only", action="store", type=inkex.utils.Boolean, dest="move_only", default=False,
             help="Move only, instead of cutting and moving. Default: False")
 
-        self.OptionParser.add_option(
-            "--dummy", action="store", type="inkbool", dest="dummy", default=False,
+        self.arg_parser.add_argument(
+            "--dummy", action="store", type=inkex.utils.Boolean, dest="dummy", default=False,
             help="Dummy device: Send to /tmp/thunderlaser.rd . Default: False")
 
-        self.OptionParser.add_option(
-            '--device', dest='devicelist', type='string', default='/dev/ttyUSB0,/dev/ttyACM0,/tmp/thunderlaser.rd', action='store',
+        self.arg_parser.add_argument(
+            '--device', dest='devicelist', type=str, default='/dev/ttyUSB0,/dev/ttyACM0,/tmp/thunderlaser.rd', action='store',
             help='Output device or file name to use. A comma-separated list. Default: /dev/ttyUSB0,/dev/ttyACM0,/tmp/thunderlaser.rd')
 
-        self.OptionParser.add_option('-V', '--version',
+        self.arg_parser.add_argument('-V', '--version',
           action = 'store_const', const=True, dest = 'version', default = False,
           help='Just print version number ("'+self.__version__+'") and exit.')
 
@@ -2031,8 +2039,8 @@ Option parser example:
         if self.options.ids:
             # Traverse the selected objects
             for id in self.options.ids:
-                transform = svg.recursivelyGetEnclosingTransform(self.selected[id])
-                svg.recursivelyTraverseSvg([self.selected[id]], transform)
+                transform = svg.recursivelyGetEnclosingTransform(self.svg.selected[id])
+                svg.recursivelyTraverseSvg([self.svg.selected[id]], transform)
         else:
             # Traverse the entire document building new, transformed paths
             svg.recursivelyTraverseSvg(self.document.getroot(), svg.docTransform)
@@ -2093,8 +2101,10 @@ Option parser example:
                                 [bbox[0][0],bbox[1][1]], [bbox[0][0],bbox[0][1]] ]]
                 paths_list_cut = paths_list
                 paths_list_mark = paths_list
-                if cut_opt['color']  == 'any' or mark_opt is None: paths_list_mark = []
-                if mark_opt['color'] == 'any' or  cut_opt is None: paths_list_cut  = []      # once is enough.
+                if cut_opt['color']  == 'any' or mark_opt is None: 
+                     paths_list_mark = []
+                elif mark_opt['color'] == 'any' or  cut_opt is None: 
+                     paths_list_cut  = []      # once is enough.
         if self.options.move_only:
                 paths_list      = rd.paths2moves(paths_list)
                 paths_list_cut  = rd.paths2moves(paths_list_cut)
@@ -2110,7 +2120,7 @@ Option parser example:
                                 'paths': paths_list,
                                 'cut':  { 'paths':paths_list_cut,  'color': cut_color  },
                                 'mark': { 'paths':paths_list_mark, 'color': mark_color },
-                                }, fd, indent=4, sort_keys=True, encoding='utf-8')
+                                }, fd, indent=4, sort_keys=True, ensure_ascii=False)
                 print("/tmp/thunderlaser.json written.", file=sys.stderr)
         else:
                 if len(paths_list_cut) > 0 and len(paths_list_mark) > 0:
@@ -2157,13 +2167,14 @@ Option parser example:
                         pass
                     if fd is not None:
                         rd.write(fd)
+                        fd.close()
                         # print(device+" written.", file=sys.stderr)
                         device_used = device
                         break
                 if device_used is None:
                         inkex.errormsg(gettext.gettext('Warning: no usable devices in device list (or bad directoy): '+self.options.devicelist))
-
+        svg.closeTTY()
 
 if __name__ == '__main__':
     e = ThunderLaser()
-    e.affect()
+    e.run()
