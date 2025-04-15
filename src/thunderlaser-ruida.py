@@ -349,7 +349,7 @@ Option parser example:
                                 'paths': paths_list,
                                 'cut':  { 'paths':paths_list_cut,  'color': cut_color  },
                                 'mark': { 'paths':paths_list_mark, 'color': mark_color },
-                                }, fd, indent=4, sort_keys=True, encoding='utf-8')
+                                }, fd, indent=4, sort_keys=True, ensure_ascii=False)
                 print("/tmp/thunderlaser.json written.", file=sys.stderr)
         else:
                 if len(paths_list_cut) > 0 and len(paths_list_mark) > 0:
