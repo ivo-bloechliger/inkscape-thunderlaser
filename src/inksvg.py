@@ -135,11 +135,11 @@ class LinearPathGen(PathGenerator):
         fourth side implicitly
         """
         a = []
-        a.append(['M ', [x, y]])
-        a.append([' l ', [w, 0]])
-        a.append([' l ', [0, h]])
-        a.append([' l ', [-w, 0]])
-        a.append([' Z', []])
+        a.append(['M', [x, y]])
+        a.append(['l', [w, 0]])
+        a.append(['l', [0, h]])
+        a.append(['l', [-w, 0]])
+        a.append(['Z', []])
         self.pathList(a, node, mat)
 
     def objRoundedRect(self, x, y, w, h, rx, ry, node, mat):
