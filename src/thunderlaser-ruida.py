@@ -30,6 +30,8 @@ from __future__ import print_function
 
 import sys
 
+import inkex.localization
+
 sys_platform = sys.platform.lower()
 if sys_platform.startswith('win'):
   sys.path.append(r'C:\Program Files\Inkscape\share\extensions')
@@ -68,110 +70,110 @@ Option parser example:
 'thunderlaser.py', '--tab="thunderlaser"', '--cut_group="cut_plastics"', '--cut_wood=30,50,65', '--cut_plastics=25,55,70', '--cut_other=300,26,65', '--cut_manual_speed=68', '--cut_manual_minpow=60', '--cut_manual_maxpow=70', '--cut_color=any', '--mark_group="mark_material"', '--mark_material=1000,8,25', '--mark_manual_speed=30', '--mark_manual_minpow=50', '--mark_manual_maxpow=70', '--mark_color=none', '--smoothness=0.20000000298023224', '--maxwidth=900', '--maxheight=600', '--bbox_only=false', '--device=/dev/ttyUSB0,/tmp/hannes.rd', '--dummy=true', '/tmp/ink_ext_XXXXXX.svgDTI8AZ']
 
         """
-        inkex.localize()    # does not help for localizing my *.inx file
+        inkex.localization.localize()    # does not help for localizing my *.inx file
         inkex.Effect.__init__(self)
 
-        self.OptionParser.add_option(
+        self.arg_parser.add_argument(
             "--tab",  # NOTE: value is not used.
-            action="store", type="string", dest="tab", default="thunderlaser",
+            action="store", type=str, dest="tab", default="thunderlaser",
             help="The active tab when Apply was pressed")
 
-        self.OptionParser.add_option(
-            "--cut_group", action="store", type="string", dest="cut_group", default="cut_wood",
+        self.arg_parser.add_argument(
+            "--cut_group", action="store", type=str, dest="cut_group", default="cut_wood",
             help="The active cut_group tab when Apply was pressed")
 
-        self.OptionParser.add_option(
-            "--mark_group", action="store", type="string", dest="mark_group", default="mark_material",
+        self.arg_parser.add_argument(
+            "--mark_group", action="store", type=str, dest="mark_group", default="mark_material",
             help="The active mark_group tab when Apply was pressed")
 
-        self.OptionParser.add_option(
-            "--cut_color", action="store", type="string", dest="cut_color", default="any",
+        self.arg_parser.add_argument(
+            "--cut_color", action="store", type=str, dest="cut_color", default="any",
             help="The color setting for cutting. Default: any")
 
-        self.OptionParser.add_option(
-            "--mark_color", action="store", type="string", dest="mark_color", default="none",
+        self.arg_parser.add_argument(
+            "--mark_color", action="store", type=str, dest="mark_color", default="none",
             help="The color setting for cutting. Default: none")
 
 
 
-        self.OptionParser.add_option(
-            '--cut_wood', dest='cut_wood', type='string', default='30,50,65', action='store',
+        self.arg_parser.add_argument(
+            '--cut_wood', dest='cut_wood', type=str, default='30,50,65', action='store',
             help='Speed,MinPower,MaxPower Setting when cutting wood is selected.')
 
-        self.OptionParser.add_option(
-            '--cut_plastics', dest='cut_plastics', type='string', default='', action='store',
+        self.arg_parser.add_argument(
+            '--cut_plastics', dest='cut_plastics', type=str, default='', action='store',
             help='Speed,MinPower,MaxPower Setting when cutting plastics is selected.')
 
-        self.OptionParser.add_option(
-            '--cut_other', dest='cut_other', type='string', default='', action='store',
+        self.arg_parser.add_argument(
+            '--cut_other', dest='cut_other', type=str, default='', action='store',
             help='Speed,MinPower,MaxPower Setting when cutting other is selected.')
 
-        self.OptionParser.add_option(
-            '--cut_manual_speed', dest='cut_manual_speed', type='int', default=30, action='store',
+        self.arg_parser.add_argument(
+            '--cut_manual_speed', dest='cut_manual_speed', type=int, default=30, action='store',
             help='Speed Setting when cutting with manual entry is selected.')
 
-        self.OptionParser.add_option(
-            '--cut_manual_minpow', dest='cut_manual_minpow', type='int', default=30, action='store',
+        self.arg_parser.add_argument(
+            '--cut_manual_minpow', dest='cut_manual_minpow', type=int, default=30, action='store',
             help='MinPower1 Setting when cutting with manual entry is selected.')
 
-        self.OptionParser.add_option(
-            '--cut_manual_maxpow', dest='cut_manual_maxpow', type='int', default=30, action='store',
+        self.arg_parser.add_argument(
+            '--cut_manual_maxpow', dest='cut_manual_maxpow', type=int, default=30, action='store',
             help='MaxPower1 Setting when cutting with manual entry is selected.')
 
 
 
 
-        self.OptionParser.add_option(
-            '--mark_material', dest='mark_material', type='string', default='1000,7,18', action='store',
+        self.arg_parser.add_argument(
+            '--mark_material', dest='mark_material', type=str, default='1000,7,18', action='store',
             help='Speed,MinPower,MaxPower Setting when marking by material is selected.')
 
-        self.OptionParser.add_option(
-            '--mark_manual_speed', dest='mark_manual_speed', type='int', default=1000, action='store',
+        self.arg_parser.add_argument(
+            '--mark_manual_speed', dest='mark_manual_speed', type=int, default=1000, action='store',
             help='Speed Setting when marking with manual entry is selected.')
 
-        self.OptionParser.add_option(
-            '--mark_manual_minpow', dest='mark_manual_minpow', type='int', default=7, action='store',
+        self.arg_parser.add_argument(
+            '--mark_manual_minpow', dest='mark_manual_minpow', type=int, default=7, action='store',
             help='MinPower1 Setting when marking with manual entry is selected.')
 
-        self.OptionParser.add_option(
-            '--mark_manual_maxpow', dest='mark_manual_maxpow', type='int', default=18, action='store',
+        self.arg_parser.add_argument(
+            '--mark_manual_maxpow', dest='mark_manual_maxpow', type=int, default=18, action='store',
             help='MaxPower1 Setting when marking with manual entry is selected.')
 
 
 
-        self.OptionParser.add_option(
-            '--smoothness', dest='smoothness', type='float', default=float(0.2), action='store',
+        self.arg_parser.add_argument(
+            '--smoothness', dest='smoothness', type=float, default=float(0.2), action='store',
             help='Curve smoothing (less for more [0.0001 .. 5]). Default: 0.2')
 
-        self.OptionParser.add_option(
-            '--freq1', dest='freq1', type='float', default=float(20.0), action='store',
+        self.arg_parser.add_argument(
+            '--freq1', dest='freq1', type=float, default=float(20.0), action='store',
             help='Laser1 frequency [kHz]. Default: 20.0')
 
-        self.OptionParser.add_option(
-            '--maxheight', dest='maxheight', type='string', default='600', action='store',
+        self.arg_parser.add_argument(
+            '--maxheight', dest='maxheight', type=str, default='600', action='store',
             help='Height of laser area [mm]. Default: 600 mm')
 
-        self.OptionParser.add_option(
-            '--maxwidth', dest='maxwidth', type='string', default='900', action='store',
+        self.arg_parser.add_argument(
+            '--maxwidth', dest='maxwidth', type=str, default='900', action='store',
             help='Width of laser area [mm]. Default: 900 mm')
 
-        self.OptionParser.add_option(
-            "--bbox_only", action="store", type="inkbool", dest="bbox_only", default=False,
+        self.arg_parser.add_argument(
+            "--bbox_only", action="store", type=bool, dest="bbox_only", default=False,
             help="Cut bounding box only. Default: False")
 
-        self.OptionParser.add_option(
-            "--move_only", action="store", type="inkbool", dest="move_only", default=False,
+        self.arg_parser.add_argument(
+            "--move_only", action="store", type=bool, dest="move_only", default=False,
             help="Move only, instead of cutting and moving. Default: False")
 
-        self.OptionParser.add_option(
-            "--dummy", action="store", type="inkbool", dest="dummy", default=False,
+        self.arg_parser.add_argument(
+            "--dummy", action="store", type=bool, dest="dummy", default=False,
             help="Dummy device: Send to /tmp/thunderlaser.rd . Default: False")
 
-        self.OptionParser.add_option(
-            '--device', dest='devicelist', type='string', default='/dev/ttyUSB0,/dev/ttyACM0,/tmp/thunderlaser.rd', action='store',
+        self.arg_parser.add_argument(
+            '--device', dest='devicelist', type=str, default='/dev/ttyUSB0,/dev/ttyACM0,/tmp/thunderlaser.rd', action='store',
             help='Output device or file name to use. A comma-separated list. Default: /dev/ttyUSB0,/dev/ttyACM0,/tmp/thunderlaser.rd')
 
-        self.OptionParser.add_option('-V', '--version',
+        self.arg_parser.add_argument('-V', '--version',
           action = 'store_const', const=True, dest = 'version', default = False,
           help='Just print version number ("'+self.__version__+'") and exit.')
 
